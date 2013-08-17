@@ -1,0 +1,20 @@
+NET main_clk LOC     = M21 | IOSTANDARD = LVCMOS33;
+NET main_clk TNM_NET = TNM_main_clk;
+TIMESPEC TS_main_clk = PERIOD TNM_main_clk 10ns HIGH 50% INPUT_JITTER 100ps;
+
+NET n_rst             LOC = W16 | IOSTANDARD = LVCMOS33;
+
+#Button, LEDs and Switches
+NET n_led<0>        LOC = R17 | IOSTANDARD = LVCMOS33;
+NET n_led<1>        LOC = N21 | IOSTANDARD = LVCMOS33;
+NET n_led<2>        LOC = N23 | IOSTANDARD = LVCMOS33;
+NET n_led<3>        LOC = M25 | IOSTANDARD = LVCMOS33;
+
+NET n_button<0>     LOC = N14 | IOSTANDARD = LVCMOS33;
+NET n_button<1>     LOC = N18 | IOSTANDARD = LVCMOS33;
+NET n_button<2>     LOC = P24 | IOSTANDARD = LVCMOS33;
+NET n_button<3>     LOC = M24 | IOSTANDARD = LVCMOS33;
+
+NET switch<0>       LOC = R25 | IOSTANDARD = LVCMOS33;
+NET switch<1>       LOC = P19 | IOSTANDARD = LVCMOS33;
+
