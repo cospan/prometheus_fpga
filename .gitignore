@@ -1,5 +1,26 @@
 *.py[cod]
 
+# Xilinx output
+_xmsgs/
+build/
+xlnx_auto_0_xdb/
+*.xrpt
+par_usage_statistics.html
+xilinx_device_details.xml
+
+#SCons stuff
+.sconsign.dblite
+
+# VIM temporary files
+*~
+*.swp
+*.swo
+
+#Simulation Things
+*.sim
+*.vcd
+design
+
 # C extensions
 *.so
 
@@ -10,12 +31,12 @@ dist
 build
 eggs
 parts
-bin
+#bin
 var
 sdist
 develop-eggs
 .installed.cfg
-lib
+#lib
 lib64
 
 # Installer logs
@@ -33,3 +54,5 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+
