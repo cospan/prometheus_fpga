@@ -4,7 +4,16 @@ module master(
 input               clk,
 input               rst,
 
-output              o_master_ready,
+
+output  reg         o_master_ready,   //Goes high until enough data for an
+                                      //entire command is read.
+                                      //  For Ping, this is just the command
+                                      //  For Read, just the command
+                                      //  For Config, (Read) just the command
+                                      //  For Config, (Write) command + the
+                                      //    amount of data to read from host
+                                      //  For Write, command + the amount of
+                                      //    data to read from the host
 
 //Master Interface
 input       [7:0]   i_command,
@@ -82,7 +91,7 @@ reg                 r_trig_send_finished;
 //Submodules
 
 //Asynchronous Logic
-assign  o_master_ready      = (state == IDLE);
+//assign  o_master_ready      = (state == IDLE);
 assign  w_out_path_ready    = ((o_rpath_activate > 0) && (r_rpath_fifo_count < i_rpath_size));
 assign  w_status_send_finished  = (!r_send_status && !r_status_sent);
 
@@ -103,13 +112,16 @@ always @ (posedge clk) begin
   if (rst) begin
     r_trig_send_status          <= 0;
     r_trig_send_finished        <= 0;
+    o_master_ready              <= 0;
   end
   else begin
     r_trig_send_status          <= 0;
+    o_master_ready              <= 0;
 
     case (state)
       IDLE: begin
         r_trig_send_finished    <=  0;
+        o_master_ready          <=  1;
       end
       PING: begin
         if (!r_trig_send_finished) begin
@@ -118,6 +130,7 @@ always @ (posedge clk) begin
         r_trig_send_finished    <=  1;
       end
       WRITE: begin
+        o_master_ready          <=  1;
         if (r_write_count >= i_rw_count) begin
           if (!r_trig_send_finished) begin
             r_trig_send_status    <=  1;
@@ -132,6 +145,9 @@ always @ (posedge clk) begin
         r_trig_send_finished    <=  1;
       end
       CONFIG: begin
+        if (i_rw_count > 0) begin
+          o_master_ready        <=  1;
+        end
         if (!r_trig_send_finished) begin
           r_trig_send_status    <=  1;
         end
@@ -205,7 +221,7 @@ always @ (*) begin
               next_state    =  WRITE;
             end
             `READ_COMMAND: begin
-              $display ("master: Detected Read Request");
+              $display ("Detected Read Request");
               next_state    =  READ;
             end
             `CONFIG_COMMAND: begin
@@ -246,6 +262,9 @@ always @ (*) begin
       end
       CONFIG: begin
         //Write and read configuration data
+        if (r_write_count >= i_rw_count) begin
+          next_state        = IDLE;
+        end
       end
     endcase
   end

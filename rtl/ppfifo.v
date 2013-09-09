@@ -73,7 +73,7 @@ reg   [1:0]                 wcc_read_ready;// Tell read side a FIFO is ready
 wire  [1:0]                 wcc_read_done;
                                             // write status of the read
                                             // available
-wire                        wcc_tie_select; //because it's possible if the read
+reg                         wcc_tie_select; //because it's possible if the read
                                             //side is slower than the write
                                             //side it might be unknown which
                                             //side was selected first, so use
@@ -83,22 +83,26 @@ reg   [23:0]                w_count[1:0];   // save the write count for the read
                                             // side
 reg                         w_empty[1:0];
 reg                         w_reset;        //write side reset
+reg   [4:0]                 w_reset_timeout;
+wire                        ready;
 
 //assign  r_wselect           = (write_activate == 2'b00) ? 1'b0 :
 //                              (write_activate == 2'b01) ? 1'b0 :
 //                              (write_activate == 2'b10) ? 1'b1 :
+//                              reset ?                     1'b0 :
 //                              r_wselect;
-                            //I know this can be shortened down but it's more
-                            //readible thi way
+//                            //I know this can be shortened down but it's more
+//                            //readible thi way
 
 assign  addr_in             = {r_wselect, write_address};
 //assign  write_enable        = (write_activate > 0) && write_strobe;
-assign  ppfifo_ready        = !(w_reset | r_reset);
+assign  ppfifo_ready        = !(w_reset || r_reset);
+assign  ready               = ppfifo_ready;
 
-assign  wcc_tie_select      = (wcc_read_ready == 2'b00) ? 1'b0 :
-                              (wcc_read_ready == 2'b01) ? 1'b0 :
-                              (wcc_read_ready == 2'b10) ? 1'b1 :
-                              wcc_tie_select;
+//assign  wcc_tie_select      = (wcc_read_ready == 2'b00) ? 1'b0 :
+//                              (wcc_read_ready == 2'b01) ? 1'b0 :
+//                              (wcc_read_ready == 2'b10) ? 1'b1 :
+//                              wcc_tie_select;
                                             // If the first FIFO is ready,
                                             // then both FIFOs are ready then
                                             // keep the first FIFO
@@ -106,6 +110,7 @@ assign  wcc_tie_select      = (wcc_read_ready == 2'b00) ? 1'b0 :
 //Read Side
 wire  [ADDRESS_WIDTH: 0]    addr_out;     //Actual address to the BRAM
 reg                         r_reset;
+reg   [4:0]                 r_reset_timeout;
 
 reg   [ADDRESS_WIDTH - 1: 0]r_address;    //Address to access a bank
 reg                         r_rselect;     //Select a bank (Select a FIFO)
@@ -223,59 +228,111 @@ cross_clock_enable ccrf1 (
   .out_en   (wcc_read_done[1]   )
 );
 
+//R - W Reset
+cross_clock_enable cc_starved(
+  .rst      (reset                         ),
+  .in_en    (!read_ready && !read_activate ),
+
+  .out_clk  (write_clock                   ),
+  .out_en   (starved                       )
+);
+
+
+
 
 //asynchronous logic
 always @ (*) begin
-  if (reset) begin
-    r_wselect       = 1'b0;
-  end
-  else begin
-    case (write_activate)
-      2'b00: begin
-        r_wselect   = 1'b0;
-      end
-      2'b01: begin
-        r_wselect   = 1'b0;
-      end
-      2'b10: begin
-        r_wselect   = 1'b1;
-      end
-      default: begin
-        r_wselect   = 1'b0;
-      end
-    endcase
-  end
+  case (wcc_read_ready)
+    2'b00: begin
+      wcc_tie_select  = 1'b0;
+    end
+    2'b01: begin
+      wcc_tie_select  = 1'b0;
+    end
+    2'b10: begin
+      wcc_tie_select  = 1'b1;
+    end
+    default: begin
+      wcc_tie_select  = 1'b0;
+    end
+  endcase
+end
+always @ (*) begin
+  case (write_activate)
+    2'b00: begin
+      r_wselect   = 1'b0;
+    end
+    2'b01: begin
+      r_wselect   = 1'b0;
+    end
+    2'b10: begin
+      r_wselect   = 1'b1;
+    end
+    default: begin
+      r_wselect   = 1'b0;
+    end
+  endcase
 end
 
 always @ (*) begin
-  if (reset) begin
-    write_enable    = 1'b0;
+  if (write_activate > 0 && write_strobe) begin
+    write_enable  = 1'b1;
   end
   else begin
-    if (write_activate > 0 && write_strobe) begin
-      write_enable  = 1'b1;
-    end
-    else begin
-      write_enable  = 1'b0;
-    end
-
+    write_enable  = 1'b0;
   end
 end
 //synchronous logic
+
+//Reset Logic
+always @ (posedge write_clock) begin
+  if (reset) begin
+    w_reset         <=  1;
+    w_reset_timeout <=  0;
+  end
+  else begin
+    if (w_reset && (w_reset_timeout < 4'h4)) begin
+      w_reset_timeout <=  w_reset_timeout + 1;
+    end
+    else begin
+      w_reset       <=  0;
+    end
+  end
+end
+
+always @ (posedge read_clock) begin
+  if (reset) begin
+    r_reset           <=  1;
+    r_reset_timeout   <=  0;
+  end
+  else begin
+    if (r_reset && (r_reset_timeout < 4'h4)) begin
+      r_reset_timeout <= r_reset_timeout + 1;
+    end
+    else begin
+      r_reset         <=  0;
+    end
+  end
+end
 
 //---------------Write Side---------------
 initial begin
   write_address     = 0;
 
+  wcc_read_ready    = 2'b00;
   write_ready       = 2'b00;
-  w_reset           = 0;
+  w_reset           = 1;
+  w_reset_timeout   = 0;
+  write_enable      = 0;
+  r_wselect         = 0;
+  wcc_tie_select    = 0;
 end
 
 always @ (posedge write_clock) begin
   if (reset) begin
     write_ready     <=  0;
   end
-  else begin
+  else if (ready) begin
     //Logic for the Write Enable
     if (write_activate[0] && write_strobe) begin
       write_ready[0] <=  1'b0;
@@ -350,7 +407,7 @@ initial begin
   r_rselect       = 0;
   r_address       = 0;
 
-  rcc_read_done   = 2'b11;
+  rcc_read_done   = 2'b00;
 
   r_size[0]       = 24'h0;
   r_size[1]       = 24'h0;
@@ -361,7 +418,8 @@ initial begin
   r_pre_activate  = 0;
 
   r_next_fifo     = 0;
-  r_reset         = 0;
+  r_reset         = 1;
+  r_reset_timeout = 0;
   read_ready      = 0;
   r_read_data     = 32'h0;
   r_pre_read_wait = 0;
@@ -404,7 +462,8 @@ always @ (posedge read_clock) begin
         if (r_ready > 0) begin
           //This goes to one instead of activate
           //Output select
-          read_ready                    <=  1;
+          //read_ready                  <=  1;
+
           if (r_ready[0] && r_ready[1]) begin
             //$display ("Tie");
             //Tie
@@ -435,7 +494,6 @@ always @ (posedge read_clock) begin
           end
         end
       end
-
       //User has finished reading something
       else if (r_activate[r_rselect] && !r_ready[r_rselect]) begin
         r_activate[r_rselect]          <=  0;
@@ -443,6 +501,11 @@ always @ (posedge read_clock) begin
       end
     end
     else begin
+      if ((r_pre_activate > 0) && r_pre_read_wait) begin
+        read_ready                      <=  1;
+      end
+
+
       if (r_activate) begin
         read_ready                    <=  0;
         //User is requesting an accss
