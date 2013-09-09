@@ -8,7 +8,7 @@ input               clk,
 input               rst,
 
 //Control From Master
-input               i_read_fx3_packet,
+//input               i_read_fx3_packet,
 output              o_read_fx3_finished,
 input               i_read_flow_cntrl,
 
@@ -19,20 +19,20 @@ input       [23:0]  i_packet_size,
 //Control Signals
 output              o_output_enable,
 output              o_read_enable,
-input               i_dma_ready,
 
 //Processed Data
 output              o_data_valid,
-output              o_in_path_idle
+input               i_in_path_enable,
+output              o_in_path_busy,
+output              o_in_path_finished
 );
 
 
 //Local Parameters
 localparam IDLE                   = 4'h0;
-localparam WAIT_FOR_DMA           = 4'h1;
-localparam READ                   = 4'h2;
-localparam READ_OE_DELAY          = 4'h3;
-localparam FINISHED               = 4'h4;
+localparam READ                   = 4'h1;
+localparam READ_OE_DELAY          = 4'h2;
+localparam FINISHED               = 4'h3;
 
 //Registers/Wires
 reg         [3:0]   state;
@@ -43,8 +43,6 @@ reg         [1:0]   r_pre_re_count;
 reg         [1:0]   r_post_re_count;
 
 //Asynchronous logic registers
-reg                 r_dma_ready;
-reg                 r_enable;
 
 //Interface to in controller
 wire                w_controller_read_request;
@@ -53,33 +51,26 @@ wire                o_data_valid;
 //Sub Modules
 //Asynchronous Logic
 assign  o_read_enable       = (state == READ);
-assign  o_output_enable     = ((state == READ) | 
+assign  o_output_enable     = ((state == READ) |
                                (state == READ_OE_DELAY));
 assign  o_data_valid        = (r_pre_re_count == 0) &&
                               (r_post_re_count > 0);
-assign  o_in_path_idle      = ((state == IDLE) || (!i_dma_ready));
 //This will go when a transaction is finished and low when the user de-asserts
 //the i_read_enable signal
 assign  o_read_fx3_finished = (state == FINISHED);
+assign  o_in_path_busy      = ((state != IDLE) && (state != FINISHED));
+assign  o_in_path_finished  = (state == FINISHED);
 
 //State Machine
 always @ (*) begin
   next_state  = state;
   case (state)
     IDLE: begin
-      if (i_read_fx3_packet && i_read_flow_cntrl) begin
-        next_state  = WAIT_FOR_DMA;
-      end
-      else begin
-        next_state  = IDLE;
-      end
-    end
-    WAIT_FOR_DMA: begin
-      if (i_dma_ready) begin
+      if (i_in_path_enable && i_read_flow_cntrl) begin
         next_state  = READ;
       end
       else begin
-        next_state  = WAIT_FOR_DMA;
+        next_state  = IDLE;
       end
     end
     READ: begin
@@ -99,7 +90,8 @@ always @ (*) begin
       end
     end
     FINISHED: begin
-      if (!i_read_fx3_packet) begin
+      //if (!i_read_fx3_packet && !i_in_path_enable) begin
+      if (!i_in_path_enable) begin
         next_state  = IDLE;
       end
       else begin
@@ -117,17 +109,6 @@ end
 //    data
 //    dma flags
 //    control signal
-always @ (posedge clk) begin
-  if (rst) begin
-    r_dma_ready   = 1'b0;
-    r_enable      = 1'b0;
-  end
-  else begin
-    r_dma_ready   = i_dma_ready;
-    r_enable      = i_read_fx3_packet;
-  end
-end
-
 
 //Synchronous Counter
 
@@ -140,9 +121,6 @@ always @ (posedge clk) begin
   else begin
     case (state)
       IDLE: begin
-        r_pre_re_count    <=  `RD_ENABLE_DELAY;
-      end
-      WAIT_FOR_DMA: begin
         r_pre_re_count    <=  `RD_ENABLE_DELAY;
       end
       READ: begin

@@ -10,9 +10,14 @@ parameter           ADDRESS_WIDTH = 8   //256 32-bit values to align with
 input               clk,
 input               rst,
 
+//Control
+output  reg         o_out_path_ready,   //Status Strobe detected, lock in count
+input               i_out_path_enable,  //A buffer is available to write to
+output              o_out_path_busy,    //Outpath is busy writing data out
+output  reg         o_out_path_finished,//Outpath is finished writing data out
 
-//Feedback from input path
-input               i_in_path_idle,
+input               i_dma_buf_ready,    //A buffer is ready to write to
+output  reg         o_dma_buf_finished, //A buffer has been filled or finished
 
 //Packet size
 input       [23:0]  i_packet_size,
@@ -21,7 +26,6 @@ input               i_status_rdy_stb,
 input       [31:0]  i_read_size,
 
 //FX3 Interface
-input               i_fpga2mcu_ch_rdy,
 output  reg         o_write_enable,
 output  reg         o_packet_end,
 output      [31:0]  o_data,
@@ -32,8 +36,8 @@ input       [1:0]   i_rpath_activate,
 output      [23:0]  o_rpath_size,
 input       [31:0]  i_rpath_data,
 input               i_rpath_strobe
-
 );
+
 //Local Parameters
 localparam IDLE                   = 4'h0;
 localparam WAIT_FOR_READY         = 4'h1;
@@ -84,8 +88,9 @@ ppfifo#(
 );
 
 //Asynchronous Logic
-//Synchronous Logic
+assign  o_out_path_busy     = ((state != IDLE) && !o_out_path_finished);
 
+//Synchronous Logic
 always @ (posedge clk) begin
   if (rst) begin
     state                 <=  IDLE;
@@ -100,6 +105,11 @@ always @ (posedge clk) begin
     r_latency_count       <=  0;
     r_out_activate        <=  0;
 
+    //Controller Interface
+    o_out_path_ready      <=  0;
+    o_out_path_finished   <=  0;
+    o_dma_buf_finished    <=  0;
+
   end
   else begin
     //Strobes
@@ -107,12 +117,23 @@ always @ (posedge clk) begin
     o_write_enable        <=  0;
     o_packet_end          <=  0;
 
+
+    //Controller Interface
+    o_out_path_finished   <=  0;
+    if (i_out_path_enable) begin
+      o_out_path_ready    <=  0;
+    end
+    if (i_out_path_enable && !o_out_path_busy) begin
+      o_out_path_finished <=  1;
+    end
+
+
     //Ping Pong FIFO Interface
     if (w_out_ready && !r_out_activate) begin
       r_ppfifo_count      <=  0;
       r_out_activate      <=  1;
     end
-    else if (r_ppfifo_count >= w_out_size) begin
+    else if (r_out_activate && (r_ppfifo_count >= w_out_size)) begin
       //$display ("fx3_bus_out_path: Ping Pong FIFO Finished");
       r_ppfifo_count      <=  0;
       r_out_activate      <=  0;
@@ -123,7 +144,11 @@ always @ (posedge clk) begin
       IDLE: begin
         r_packet_count        <=  0;
         r_data_out_size       <=  0;
+        o_out_path_ready      <=  0;
+
         if (i_status_rdy_stb) begin
+          o_out_path_ready    <=  1;
+
           r_data_out_size     <=  i_read_size + `STATUS_LENGTH;
           r_data_out_count    <=  0;
           //data to send
@@ -132,7 +157,7 @@ always @ (posedge clk) begin
         end
       end
       WAIT_FOR_READY: begin
-        if (i_fpga2mcu_ch_rdy && r_out_activate && i_in_path_idle) begin
+        if (i_dma_buf_ready   && r_out_activate) begin
           //$display ("fx3_bus_out_path: Write to host");
           r_packet_count      <=  0;
           state               <=  WRITE_TO_HOST;
@@ -158,14 +183,19 @@ always @ (posedge clk) begin
           end
           else begin
             //$display ("fx3_bus_out_path: Packet Sent to FX3");
-            r_latency_count   <=  0;
-            state             <=  LATENCY_HOLD;
+            r_latency_count     <=  0;
+            state               <=  LATENCY_HOLD;
+            o_dma_buf_finished  <=  1;
           end
         end
         else begin
-          $display ("fx3_bus_out_path: Sent all data");
-          state               <=  IDLE;
-          r_out_activate      <=  0;
+          o_out_path_finished   <=  1;
+          r_out_activate        <=  0;
+
+          if (!i_out_path_enable) begin
+            $display ("fx3_bus_out_path: Sent all data");
+            state               <=  IDLE;
+          end
         end
         //Don't write a packet larger than the packet size
         //If we reached packet size go to an IDLE state
@@ -173,11 +203,17 @@ always @ (posedge clk) begin
           //happen, this should be aligned with the output size
       end
       LATENCY_HOLD: begin
+        o_dma_buf_finished      <=  1;
         if (r_latency_count < `LATENCY_TIMEOUT) begin
-          r_latency_count     <=  r_latency_count + 1;
+          r_latency_count       <=  r_latency_count + 1;
         end
         else begin
-          state               <=  WAIT_FOR_READY;
+          if (!i_dma_buf_ready) begin
+            //Wait for the controller to deassert the dma ready signal to
+            //continue
+            state               <=  WAIT_FOR_READY;
+            o_dma_buf_finished  <=  0;
+          end
         end
       end
     endcase

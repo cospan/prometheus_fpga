@@ -27,17 +27,21 @@ input               rst,
 //Phy Interface
 inout       [31:0]  io_data,
 
-input               i_mcu2fpga_ch_rdy,
-input               i_fpga2mcu_ch_rdy,
-
 output              o_oe_n,
 output              o_we_n,
 output              o_re_n,
 output              o_pkt_end_n,
 
+input               i_in_ch0_rdy,
+input               i_in_ch1_rdy,
+
+input               i_out_ch0_rdy,
+input               i_out_ch1_rdy,
+
+output      [1:0]   o_socket_addr,
+
 
 //Master Interface
-
 input               i_master_ready,
 
 output      [7:0]   o_command,
@@ -76,98 +80,153 @@ wire                w_read_enable;
 wire                w_write_enable;
 wire                w_packet_end;
 
-wire                w_read_fx3_packet;
-wire                w_read_fx3_finished;
 wire        [31:0]  w_in_data;
 wire        [31:0]  w_out_data;
 wire                w_data_valid;
-wire                w_in_path_idle;
 
 wire        [23:0]  w_packet_size;
 wire                w_read_flow_cntrl;
+
+//In Path Control
+wire                w_in_path_enable;
+wire                w_in_path_busy;
+wire                w_in_path_finished;
+
+//In Command Path
+wire                w_in_path_cmd_enable;
+wire                w_in_path_cmd_busy;
+wire                w_in_path_cmd_finished;
+
+//Out Path Control
+wire                w_out_path_ready;
+wire                w_out_path_enable;
+wire                w_out_path_busy;
+wire                w_out_path_finished;
 
 //Submodules
 
 //Data From FX3 to FPGA
 fx3_bus_in_path in_path(
-  .clk                 (clk                 ),
-  .rst                 (rst                 ),
+  .clk                    (clk                    ),
+  .rst                    (rst                    ),
 
   //Control Signals
-  .i_packet_size       (w_packet_size       ),
-  .i_read_fx3_packet   (w_read_fx3_packet   ),
-  .o_read_fx3_finished (w_read_fx3_finished ),
-  .i_read_flow_cntrl   (w_read_flow_cntrl   ),
-
-  .i_dma_ready         (i_mcu2fpga_ch_rdy   ),
-                        //XXX: in the future this will be
-                        //Replaced by a ready signal from
-                        //an address manager in order to
-                        //switch between input buffers
+  .i_packet_size          (w_packet_size          ),
+  .i_read_flow_cntrl      (w_read_flow_cntrl      ),
 
   //FX3 Interface
-  .o_output_enable     (w_output_enable     ),
-  .o_read_enable       (w_read_enable       ),
+  .o_output_enable        (w_output_enable        ),
+  .o_read_enable          (w_read_enable          ),
 
   //When high w_in_data is valid
-  .o_data_valid        (w_data_valid        ),
-  .o_in_path_idle      (w_in_path_idle      )
+  .o_data_valid           (w_data_valid           ),
+  .i_in_path_enable       (w_in_path_enable       ),
+  .o_in_path_busy         (w_in_path_busy         ),
+  .o_in_path_finished     (w_in_path_finished     )
 );
 
 //Data from in_path to command reader
-fx3_bus_in_control in_cmd(
-  .clk                 (clk                 ),
-  .rst                 (rst                 ),
+fx3_bus_in_command in_cmd(
+  .clk                    (clk                    ),
+  .rst                    (rst                    ),
 
-  .i_master_ready      (i_master_ready      ),
-  .o_read_fx3_packet   (w_read_fx3_packet   ),
-  .i_read_fx3_finished (w_read_fx3_finished ),
-  .o_read_flow_cntrl   (w_read_flow_cntrl   ),
+  .o_read_flow_cntrl      (w_read_flow_cntrl      ),
+
+  //Control
+  .i_in_path_cmd_enable   (w_in_path_cmd_enable   ),
+  .o_in_path_cmd_busy     (w_in_path_cmd_busy     ),
+  .o_in_path_cmd_finished (w_in_path_cmd_finished ),
 
   //Data
-  .i_data              (w_in_data           ),
+  .i_data                 (w_in_data              ),
   //Data Valid Flag
-  .i_data_valid        (w_data_valid        ),
+  .i_data_valid           (w_data_valid           ),
 
   //Master Interface
-  .o_command           (o_command           ),
-  .o_flag              (o_flag              ),
-  .o_rw_count          (o_rw_count          ),
-  .o_address           (o_address           ),
-  .o_command_rdy_stb   (o_command_rdy_stb   ),
+  .o_command              (o_command              ),
+  .o_flag                 (o_flag                 ),
+  .o_rw_count             (o_rw_count             ),
+  .o_address              (o_address              ),
+  .o_command_rdy_stb      (o_command_rdy_stb      ),
 
   //Write side FIFO interface
-  .o_in_ready          (o_wpath_ready       ),
-  .i_in_activate       (i_wpath_activate    ),
-  .o_in_packet_size    (o_wpath_packet_size ),
-  .o_in_data           (o_wpath_data        ),
-  .i_in_strobe         (i_wpath_strobe      )
+  .o_in_ready             (o_wpath_ready          ),
+  .i_in_activate          (i_wpath_activate       ),
+  .o_in_packet_size       (o_wpath_packet_size    ),
+  .o_in_data              (o_wpath_data           ),
+  .i_in_strobe            (i_wpath_strobe         )
 );
 
+
+//Data from Master to The host
 fx3_bus_out_path out_path(
-  .clk                 (clk                 ),
-  .rst                 (rst                 ),
+  .clk                    (clk                    ),
+  .rst                    (rst                    ),
+
+  //Control
+  .o_out_path_ready       (w_out_path_ready       ),
+  .i_out_path_enable      (w_out_path_enable      ),
+  .o_out_path_busy        (w_out_path_busy        ),
+  .o_out_path_finished    (w_out_path_finished    ),
+
+  .i_dma_buf_ready        (w_out_dma_buf_ready    ),
+  .o_dma_buf_finished     (w_out_dma_buf_finished ),
 
   //Packet size
-  .i_packet_size       (w_packet_size       ),
-  .i_status_rdy_stb    (i_status_rdy_stb    ),
-  .i_read_size         (i_read_size         ),
-
-  //Feedback from the in path
-  .i_in_path_idle      (w_in_path_idle      ),
+  .i_packet_size          (w_packet_size          ),
+  .i_status_rdy_stb       (i_status_rdy_stb       ),
+  .i_read_size            (i_read_size            ),
 
   //FX3 Interface
-  .i_fpga2mcu_ch_rdy   (i_fpga2mcu_ch_rdy   ),
-  .o_write_enable      (w_write_enable      ),
-  .o_packet_end        (w_packet_end        ),
-  .o_data              (w_out_data          ),
+  .o_write_enable         (w_write_enable         ),
+  .o_packet_end           (w_packet_end           ),
+  .o_data                 (w_out_data             ),
 
   //FIFO in path
-  .o_rpath_ready       (o_rpath_ready       ),
-  .i_rpath_activate    (i_rpath_activate    ),
-  .o_rpath_size        (o_rpath_size        ),
-  .i_rpath_data        (i_rpath_data        ),
-  .i_rpath_strobe      (i_rpath_strobe      )
+  .o_rpath_ready          (o_rpath_ready          ),
+  .i_rpath_activate       (i_rpath_activate       ),
+  .o_rpath_size           (o_rpath_size           ),
+  .i_rpath_data           (i_rpath_data           ),
+  .i_rpath_strobe         (i_rpath_strobe         )
+);
+
+fx3_bus_controller controller(
+  .clk                    (clk                    ),
+  .rst                    (rst                    ),
+
+  //FX3 Parallel Interface
+  .i_in_ch0_rdy           (i_in_ch0_rdy           ),
+  .i_in_ch1_rdy           (i_in_ch1_rdy           ),
+
+  .i_out_ch0_rdy          (i_out_ch0_rdy          ),
+  .i_out_ch1_rdy          (i_out_ch1_rdy          ),
+
+  .o_socket_addr          (o_socket_addr          ),
+
+  //Incomming Data
+  .i_master_rdy           (i_master_ready         ),
+
+  //Outgoing Flags/Feedback
+  .o_in_path_enable       (w_in_path_enable       ),
+  .i_in_path_busy         (w_in_path_busy         ),
+  .i_in_path_finished     (w_in_path_finished     ),
+
+  //Command Path
+  .o_in_path_cmd_enable   (w_in_path_cmd_enable   ),
+  .i_in_path_cmd_busy     (w_in_path_cmd_busy     ),
+  .i_in_path_cmd_finished (w_in_path_cmd_finished ),
+
+  //Master Interface
+
+  //Output Path
+  .i_out_path_ready       (w_out_path_ready       ),
+  .o_out_path_enable      (w_out_path_enable      ),
+  .i_out_path_busy        (w_out_path_busy        ),
+  .i_out_path_finished    (w_out_path_finished    ),
+
+  .o_out_dma_buf_ready    (w_out_dma_buf_ready    ),
+  .i_out_dma_buf_finished (w_out_dma_buf_finished )
+
 );
 
 
