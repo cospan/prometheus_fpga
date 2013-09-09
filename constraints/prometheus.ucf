@@ -5,66 +5,68 @@ TIMESPEC TS_main_clk = PERIOD TNM_main_clk 10ns HIGH 50% INPUT_JITTER 100ps;
 NET rst_n             LOC = W16 | IOSTANDARD = LVCMOS33;
 
 #Button, LEDs and Switches
-NET o_led_n<0>        LOC = R17 | IOSTANDARD = LVCMOS33;
-NET o_led_n<1>        LOC = N21 | IOSTANDARD = LVCMOS33;
-NET o_led_n<2>        LOC = N23 | IOSTANDARD = LVCMOS33;
-NET o_led_n<3>        LOC = M25 | IOSTANDARD = LVCMOS33;
 
-NET i_button<0>       LOC = N14 | IOSTANDARD = LVCMOS33;
-NET i_button<1>       LOC = N18 | IOSTANDARD = LVCMOS33;
-NET i_button<2>       LOC = P24 | IOSTANDARD = LVCMOS33;
-NET i_button<3>       LOC = M24 | IOSTANDARD = LVCMOS33;
+NET o_led_n<0>              LOC = R17     | IOSTANDARD = LVCMOS33;
+NET o_led_n<1>              LOC = N21     | IOSTANDARD = LVCMOS33;
+NET o_led_n<2>              LOC = N23     | IOSTANDARD = LVCMOS33;
+NET o_led_n<3>              LOC = M25     | IOSTANDARD = LVCMOS33;
 
-NET i_switch<0>       LOC = R25 | IOSTANDARD = LVCMOS33;
-NET i_switch<1>       LOC = P19 | IOSTANDARD = LVCMOS33;
+NET i_button<0>             LOC = N14     | IOSTANDARD = LVCMOS33;
+NET i_button<1>             LOC = N18     | IOSTANDARD = LVCMOS33;
+NET i_button<2>             LOC = P24     | IOSTANDARD = LVCMOS33;
+NET i_button<3>             LOC = M24     | IOSTANDARD = LVCMOS33;
+
+NET i_switch<0>             LOC = R25     | IOSTANDARD = LVCMOS33;
+NET i_switch<1>             LOC = P19     | IOSTANDARD = LVCMOS33;
 
 #GPIF Interface
-i_gpif_wr_ready<0>    LOC =         | IOSTANDARD = LVCMOS33;
-i_gpif_wr_ready<1>    LOC =         | IOSTANDARD = LVCMOS33;
 
-i_gpif_rd_ready<0>    LOC =         | IOSTANDARD = LVCMOS33;
-i_gpif_rd_ready<1>    LOC =         | IOSTANDARD = LVCMOS33;
+NET i_gpif_in_ch0_rdy       LOC = AC17    | IOSTANDARD = LVCMOS33;
+NET i_gpif_in_ch1_rdy       LOC = AD17    | IOSTANDARD = LVCMOS33;
 
-io_gpif_data<0>       LOC = AA17    | IOSTANDARD = LVCMOS33;
-io_gpif_data<1>       LOC = AA19    | IOSTANDARD = LVCMOS33;
-io_gpif_data<2>       LOC = AB20    | IOSTANDARD = LVCMOS33;
-io_gpif_data<3>       LOC = AE20    | IOSTANDARD = LVCMOS33;
-io_gpif_data<4>       LOC = Y17     | IOSTANDARD = LVCMOS33;
-io_gpif_data<5>       LOC = AB21    | IOSTANDARD = LVCMOS33;
-io_gpif_data<6>       LOC = AD23    | IOSTANDARD = LVCMOS33;
-io_gpif_data<7>       LOC = AF22    | IOSTANDARD = LVCMOS33;
-io_gpif_data<8>       LOC = AF18    | IOSTANDARD = LVCMOS33;
-io_gpif_data<9>       LOC = AC23    | IOSTANDARD = LVCMOS33;
-io_gpif_data<10>      LOC = AA18    | IOSTANDARD = LVCMOS33;
-io_gpif_data<11>      LOC = Y18     | IOSTANDARD = LVCMOS33;
-io_gpif_data<12>      LOC = AC18    | IOSTANDARD = LVCMOS33;
-io_gpif_data<13>      LOC = Y16     | IOSTANDARD = LVCMOS33;
-io_gpif_data<14>      LOC = AF17    | IOSTANDARD = LVCMOS33;
-io_gpif_data<15>      LOC = AB19    | IOSTANDARD = LVCMOS33;
-io_gpif_data<16>      LOC = AF24    | IOSTANDARD = LVCMOS33;
-io_gpif_data<17>      LOC = AE22    | IOSTANDARD = LVCMOS33;
-io_gpif_data<18>      LOC = AF19    | IOSTANDARD = LVCMOS33;
-io_gpif_data<19>      LOC = AE23    | IOSTANDARD = LVCMOS33;
-io_gpif_data<20>      LOC = AD21    | IOSTANDARD = LVCMOS33;
-io_gpif_data<21>      LOC = AE21    | IOSTANDARD = LVCMOS33;
-io_gpif_data<22>      LOC = AE25    | IOSTANDARD = LVCMOS33;
-io_gpif_data<23>      LOC = AE26    | IOSTANDARD = LVCMOS33;
-io_gpif_data<24>      LOC = AC19    | IOSTANDARD = LVCMOS33;
-io_gpif_data<25>      LOC = AC22    | IOSTANDARD = LVCMOS33;
-io_gpif_data<26>      LOC = AD26    | IOSTANDARD = LVCMOS33;
-io_gpif_data<27>      LOC = AD25    | IOSTANDARD = LVCMOS33;
-io_gpif_data<28>      LOC = AE17    | IOSTANDARD = LVCMOS33;
-io_gpif_data<29>      LOC = AF23    | IOSTANDARD = LVCMOS33;
-io_gpif_data<30>      LOC = AD19    | IOSTANDARD = LVCMOS33;
-io_gpif_data<31>      LOC = AF20    | IOSTANDARD = LVCMOS33;
+NET i_gpif_out_ch0_rdy      LOC = AD20    | IOSTANDARD = LVCMOS33;
+NET i_gpif_out_ch1_rdy      LOC = AE18    | IOSTANDARD = LVCMOS33;
 
-o_gpif_addr<0>        LOC =         | IOSTANDARD = LVCMOS33;
-o_gpif_addr<1>        LOC =         | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<0>         LOC = AA17    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<1>         LOC = AA19    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<2>         LOC = AB20    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<3>         LOC = AE20    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<4>         LOC = Y17     | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<5>         LOC = AB21    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<6>         LOC = AD23    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<7>         LOC = AF22    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<8>         LOC = AF18    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<9>         LOC = AC23    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<10>        LOC = AA18    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<11>        LOC = Y18     | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<12>        LOC = AC18    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<13>        LOC = Y16     | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<14>        LOC = AF17    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<15>        LOC = AB19    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<16>        LOC = AF24    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<17>        LOC = AE22    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<18>        LOC = AF19    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<19>        LOC = AE23    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<20>        LOC = AD21    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<21>        LOC = AE21    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<22>        LOC = AE25    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<23>        LOC = AE26    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<24>        LOC = AC19    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<25>        LOC = AC22    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<26>        LOC = AD26    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<27>        LOC = AD25    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<28>        LOC = AE17    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<29>        LOC = AF23    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<30>        LOC = AD19    | IOSTANDARD = LVCMOS33;
+NET io_gpif_data<31>        LOC = AF20    | IOSTANDARD = LVCMOS33;
+
+NET o_gpif_socket_addr<0>   LOC = AF25    | IOSTANDARD = LVCMOS33;
+NET o_gpif_socket_addr<1>   LOC = AC21    | IOSTANDARD = LVCMOS33;
 
 
-o_gpif_clk            LOC =     | IOSTANDARD = LVCMOS33;
-o_gpif_oe_n           LOC =     | IOSTANDARD = LVCMOS33;
-o_gpif_we_n           LOC =     | IOSTANDARD = LVCMOS33;
-o_gpif_re_n           LOC =     | IOSTANDARD = LVCMOS33;
-o_gpif_pkt_end_n      LOC =     | IOSTANDARD = LVCMOS33;
+NET o_gpif_clk              LOC = AA20    | IOSTANDARD = LVCMOS33;
+NET o_gpif_oe_n             LOC = AD24    | IOSTANDARD = LVCMOS33;
+NET o_gpif_we_n             LOC = AB22    | IOSTANDARD = LVCMOS33;
+NET o_gpif_re_n             LOC = AB17    | IOSTANDARD = LVCMOS33;
+NET o_gpif_pkt_end_n        LOC = AD18    | IOSTANDARD = LVCMOS33;
 

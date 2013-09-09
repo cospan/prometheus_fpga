@@ -9,7 +9,6 @@ input               rst,
 
 //Control From Master
 //input               i_read_fx3_packet,
-output              o_read_fx3_finished,
 input               i_read_flow_cntrl,
 
 input       [23:0]  i_packet_size,
@@ -46,7 +45,6 @@ reg         [1:0]   r_post_re_count;
 
 //Interface to in controller
 wire                w_controller_read_request;
-wire                o_data_valid;
 
 //Sub Modules
 //Asynchronous Logic
@@ -57,7 +55,6 @@ assign  o_data_valid        = (r_pre_re_count == 0) &&
                               (r_post_re_count > 0);
 //This will go when a transaction is finished and low when the user de-asserts
 //the i_read_enable signal
-assign  o_read_fx3_finished = (state == FINISHED);
 assign  o_in_path_busy      = ((state != IDLE) && (state != FINISHED));
 assign  o_in_path_finished  = (state == FINISHED);
 

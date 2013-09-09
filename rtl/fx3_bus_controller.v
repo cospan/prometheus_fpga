@@ -6,7 +6,6 @@ input               clk,
 input               rst,
 
 //Master Interface
-output              o_host_interface_rdy,
 input               i_master_rdy,
 
 //Path Interface Signals
@@ -70,12 +69,11 @@ wire                w_out_path_idle;
 assign  w_in_path_idle        = (!w_in_data_avail && !o_in_path_enable);
 assign  w_in_cmd_path_idle    = !o_in_path_enable;
 assign  w_out_path_idle       = !o_out_path_enable    &&
-                                !o_out_path_busy      &&
-                                !o_out_path_finished  &&
-                                !o_out_path_ready;
+                                !i_out_path_busy      &&
+                                !i_out_path_finished  &&
+                                !i_out_path_ready;
 
 
-assign  o_host_interface_rdy  = w_out_path_idle;
 assign  w_in_data_avail       = (i_in_ch0_rdy || i_in_ch1_rdy);
 assign  w_out_buf_avail       = (i_out_ch0_rdy || i_out_ch1_rdy);
 
